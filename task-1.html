@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Weather & News Hub • Public API Demo</title>
+  <!-- Tailwind CSS via CDN for styling -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <meta name="color-scheme" content="light dark" />
+  <style>
+    /* small helper to clamp text */
+    .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  </style>
+</head>
+<body class="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 text-slate-100 font-sans">
+  <div class="max-w-4xl mx-auto p-5 space-y-8">
+    
+    <!-- Date and Time Section -->
+    <header id="dateTime" class="text-center mb-8 pt-4">
+      <div id="time" class="text-5xl md:text-6xl font-bold text-slate-100 tracking-tight"></div>
+      <div id="date" class="text-lg text-slate-300"></div>
+    </header>
+
+    <!-- Weather Section -->
+    <section>
+      <header class="flex items-center gap-3 mb-5">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-10 h-10 text-yellow-300">
+          <path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12Zm0 4a1 1 0 0 1-1-1v-1a1 1 0 1 1 2 0v1a1 1 0 0 1-1 1Zm0-18a1 1 0 0 1-1-1V2a1 1 0 1 1 2 0v1a1 1 0 0 1-1 1Zm10 8a1 1 0 0 1-1 1h-1a1 1 0 1 1 0-2h1a1 1 0 0 1 1 1ZM4 12a1 1 0 0 1-1 1H2a1 1 0 1 1 0-2h1a1 1 0 0 1 1 1Zm14.95 7.536a1 1 0 0 1-1.414 0l-.707-.707a1 1 0 0 1 1.414-1.415l.707.708a1 1 0 0 1 0 1.414ZM6.171 6.171a1 1 0 0 1-1.414 0l-.707-.707A1 1 0 0 1 5.464 4.05l.707.707a1 1 0 0 1 0 1.414Zm12.02-1.414a1 1 0 0 1 0 1.414l-.707.707A1 1 0 1 1 16.07 5.465l.707-.707a1 1 0 0 1 1.414 0ZM6.878 18.12a1 1 0 0 1 0-1.414l.707-.707a1 1 0 1 1 1.414 1.414l-.707.707a1 1 0 0 1-1.414 0Z"/>
+        </svg>
+        <div>
+          <h1 class="text-2xl font-semibold">Weather Now</h1>
+          <p class="text-slate-300 text-sm">Live weather from Open‑Meteo API</p>
+        </div>
+      </header>
+      <div class="bg-white/5 backdrop-blur rounded-2xl p-4 shadow-xl space-y-3">
+        <div class="flex gap-2">
+          <input id="city" class="flex-1 rounded-2xl px-4 py-2 bg-white/10 outline-none focus:ring-2 ring-yellow-300 placeholder:text-slate-400" placeholder="Enter a city e.g., Hyderabad" />
+          <button id="searchWeatherBtn" class="rounded-2xl px-4 py-2 bg-yellow-300 text-slate-900 font-medium active:scale-[.98] transition-transform">Search</button>
+          <button id="gpsBtn" class="rounded-2xl px-3 py-2 bg-white/10 text-slate-100 font-medium active:scale-[.98] transition-transform">Use my location</button>
+        </div>
+        <p id="statusWeather" class="text-sm text-slate-300 min-h-[1.25rem]"></p>
+        <div id="current" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+      </div>
+      <h2 class="text-lg font-semibold mt-6 mb-2">Next 12 hours</h2>
+      <div id="hours" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3"></div>
+    </section>
+
+    <!-- News Section -->
+    <section>
+      <header class="flex items-center gap-3 mb-5">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-10 h-10 text-blue-300">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 5.25h18m-18 4.5h18m-18 4.5h18m-18 4.5h18" />
+        </svg>
+        <div>
+          <h1 class="text-2xl font-semibold">News Hub</h1>
+          <p class="text-slate-300 text-sm">Top stories from The Guardian Open Platform</p>
+        </div>
+      </header>
+      <div class="bg-white/5 backdrop-blur rounded-2xl p-4 shadow-xl space-y-3">
+        <div class="flex gap-2">
+          <input id="query" class="flex-1 rounded-2xl px-4 py-2 bg-white/10 outline-none focus:ring-2 ring-blue-300 placeholder:text-slate-400" placeholder="Search news e.g., Technology" />
+          <button id="searchNewsBtn" class="rounded-2xl px-4 py-2 bg-blue-300 text-slate-900 font-medium active:scale-[.98] transition-transform">Search</button>
+        </div>
+        <p id="statusNews" class="text-sm text-slate-300 min-h-[1.25rem]"></p>
+        <div id="news" class="grid gap-4 mt-4"></div>
+      </div>
+    </section>
+
+    <footer class="text-xs text-slate-400 mt-8 text-center">Data: Open‑Meteo & The Guardian Open Platform • No personal key required (Guardian uses api‑key=test for demos)</footer>
+  </div>
+
+  <script>
+    // Self-invoking function to encapsulate the entire script, preventing global scope pollution.
+    (function() {
+      // =============== UTILITIES & HELPERS ===============
+      /**
+       * A reusable function to fetch JSON from a URL with error handling.
+       * @param {string} url The URL to fetch.
+       * @returns {Promise<any>} The JSON response.
+       */
+      async function fetchJSON(url) {
+        const res = await fetch(url);
+        if (!res.ok) {
+          throw new Error(`Network error: ${res.status} - ${res.statusText}`);
+        }
+        return await res.json();
+      }
+      
+      /**
+       * Simple utility to strip HTML tags from a string.
+       * @param {string} html The input string with HTML.
+       * @returns {string} The cleaned string.
+       */
+      const stripTags = (html) => (html || '').replace(/<[^>]*>/g, '');
+
+      // =============== DATE & TIME SECTION ===============
+      const timeEl = document.getElementById('time');
+      const dateEl = document.getElementById('date');
+
+      function updateDateTime() {
+          const now = new Date();
+          timeEl.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          dateEl.textContent = now.toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+      }
+
+      // =============== WEATHER SECTION ===============
+      const cityEl = document.getElementById('city');
+      const statusWeatherEl = document.getElementById('statusWeather');
+      const currentEl = document.getElementById('current');
+      const hoursEl = document.getElementById('hours');
+      const searchWeatherBtn = document.getElementById('searchWeatherBtn');
+      const gpsBtn = document.getElementById('gpsBtn');
+
+      function setStatusWeather(msg) { statusWeatherEl.textContent = msg || ''; }
+      
+      function createWeatherCard(html) { 
+        const div = document.createElement('div');
+        div.className = 'bg-white/10 rounded-2xl p-4 shadow';
+        div.innerHTML = html;
+        return div;
+      }
+
+      async function geocode(name) {
+        const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=1&language=en&format=json`;
+        const data = await fetchJSON(url);
+        if (!data.results || data.results.length === 0) {
+          throw new Error('City not found. Please try another name.');
+        }
+        return data.results[0];
+      }
+
+      async function loadWeather({ latitude, longitude, name, country }) {
+        setStatusWeather('Loading weather data...');
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,is_day&hourly=temperature_2m,precipitation_probability,wind_speed_10m&timezone=auto`;
+        const weatherData = await fetchJSON(url);
+
+        currentEl.innerHTML = '';
+        const locationName = `${name || 'Your location'}${country ? ', ' + country : ''}`;
+        const current = weatherData.current;
+        currentEl.append(
+          createWeatherCard(`
+            <div class="text-sm opacity-80">${locationName}</div>
+            <div class="text-4xl font-bold">${Math.round(current.temperature_2m)}°C</div>
+            <div class="text-sm">Feels like ${Math.round(current.apparent_temperature)}°C • Humidity ${current.relative_humidity_2m}%</div>
+          `)
+        );
+        currentEl.append(
+          createWeatherCard(`
+            <div class="font-medium">Precipitation</div>
+            <div class="text-2xl">${(current.precipitation ?? 0)} mm</div>
+          `)
+        );
+
+        hoursEl.innerHTML = '';
+        const { time, temperature_2m, precipitation_probability, wind_speed_10m } = weatherData.hourly;
+        const now = new Date();
+        let hoursShown = 0;
+        for (let i = 0; i < time.length && hoursShown < 12; i++) {
+          const forecastTime = new Date(time[i]);
+          if (forecastTime >= now) {
+            const formattedTime = forecastTime.toLocaleTimeString([], { hour: 'numeric', hour12: true });
+            const item = document.createElement('div');
+            item.className = 'bg-white/10 rounded-2xl p-3 text-center';
+            item.innerHTML = `
+              <div class="text-xs opacity-80">${formattedTime}</div>
+              <div class="text-xl font-semibold">${Math.round(temperature_2m[i])}°</div>
+              <div class="text-xs opacity-70">Rain ${precipitation_probability[i] ?? 0}%</div>
+              <div class="text-[11px] opacity-70">Wind ${Math.round(wind_speed_10m[i])} km/h</div>`;
+            hoursEl.append(item);
+            hoursShown++;
+          }
+        }
+        setStatusWeather('');
+      }
+
+      async function handleWeatherSearch() {
+        searchWeatherBtn.disabled = true;
+        gpsBtn.disabled = true;
+        try {
+          currentEl.innerHTML = ''; 
+          hoursEl.innerHTML = '';
+          const query = cityEl.value.trim() || 'Hyderabad';
+          setStatusWeather('Searching for city...');
+          const place = await geocode(query);
+          await loadWeather(place);
+        } catch (err) {
+          setStatusWeather(err.message);
+        } finally {
+          searchWeatherBtn.disabled = false;
+          gpsBtn.disabled = false;
+        }
+      }
+
+      async function handleGPS() {
+        if (!navigator.geolocation) {
+          setStatusWeather('Geolocation not supported on this device.');
+          return;
+        }
+        
+        searchWeatherBtn.disabled = true;
+        gpsBtn.disabled = true;
+        setStatusWeather('Getting your location...');
+        
+        navigator.geolocation.getCurrentPosition(
+          async (pos) => {
+            try {
+              const { latitude, longitude } = pos.coords;
+              await loadWeather({ latitude, longitude, name: 'Your location' });
+            } catch (err) {
+              setStatusWeather(err.message);
+            } finally {
+              searchWeatherBtn.disabled = false;
+              gpsBtn.disabled = false;
+            }
+          }, 
+          (err) => {
+            setStatusWeather(err.message || 'Could not get location. Please check permissions.');
+            searchWeatherBtn.disabled = false;
+            gpsBtn.disabled = false;
+          }, 
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
+        );
+      }
+
+      // =============== NEWS SECTION ===============
+      const queryEl = document.getElementById('query');
+      const statusNewsEl = document.getElementById('statusNews');
+      const newsEl = document.getElementById('news');
+      const searchNewsBtn = document.getElementById('searchNewsBtn');
+
+      function setStatusNews(msg) { statusNewsEl.textContent = msg || ''; }
+      
+      function createNewsCard(article) {
+        const thumb = article.fields?.thumbnail || 'https://placehold.co/300x200/1e293b/94a3b8?text=No+Image';
+        const desc = stripTags(article.fields?.trailText) || 'No description available.';
+        const div = document.createElement('div');
+        div.className = 'bg-white/10 rounded-2xl p-4 shadow flex flex-col sm:flex-row gap-4 hover:bg-white/20 transition-colors';
+        div.innerHTML = `
+          <img src="${thumb}" alt="Article thumbnail" class="w-full sm:w-40 h-40 object-cover rounded-xl flex-shrink-0" />
+          <div class="flex-1">
+            <h3 class="font-semibold text-lg mb-1 line-clamp-2">${article.webTitle}</h3>
+            <p class="text-sm opacity-80 mb-2 line-clamp-2">${desc}</p>
+            <a href="${article.webUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-300 text-sm font-semibold">Read more →</a>
+          </div>`;
+        return div;
+      }
+
+      async function fetchNews(topic = 'technology') {
+        searchNewsBtn.disabled = true;
+        try {
+          setStatusNews('Loading news...');
+          newsEl.innerHTML = '';
+          const url = `https://content.guardianapis.com/search?q=${encodeURIComponent(topic)}&order-by=newest&page-size=10&show-fields=trailText,thumbnail&api-key=test`;
+          const data = await fetchJSON(url);
+          const results = data.response?.results || [];
+
+          if (results.length === 0) {
+            throw new Error('No news found for this topic.');
+          }
+          results.forEach(article => newsEl.append(createNewsCard(article)));
+          setStatusNews('');
+        } catch (err) {
+          setStatusNews(err.message);
+        } finally {
+          searchNewsBtn.disabled = false;
+        }
+      }
+
+      function handleNewsSearch() {
+        const q = queryEl.value.trim() || 'technology';
+        fetchNews(q);
+      }
+      
+      // =============== INITIALIZATION & EVENT LISTENERS ===============
+      function init() {
+        // Attach Weather Event Listeners
+        searchWeatherBtn.addEventListener('click', handleWeatherSearch);
+        cityEl.addEventListener('keydown', e => { if (e.key === 'Enter') handleWeatherSearch(); });
+        gpsBtn.addEventListener('click', handleGPS);
+        
+        // Attach News Event Listeners
+        searchNewsBtn.addEventListener('click', handleNewsSearch);
+        queryEl.addEventListener('keydown', e => { if (e.key === 'Enter') handleNewsSearch(); });
+        
+        // Set up the live clock
+        updateDateTime();
+        setInterval(updateDateTime, 1000);
+
+        // Initial data loads
+        handleWeatherSearch();
+        fetchNews();
+      }
+
+      // Run the app once the DOM is fully loaded.
+      document.addEventListener('DOMContentLoaded', init);
+
+    })();
+  </script>
+</body>
+</html>
